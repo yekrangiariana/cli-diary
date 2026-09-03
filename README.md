@@ -35,19 +35,21 @@ diary              # Create a new note
 diary capture      # Quick scratchpad entry appended to today's note
 diary voice        # Speech-to-text entry (Android/Termux)
 diary search <txt> # Interactive search with preview
-diary today        # Open today's note
+diary latest       # Open the latest note
 diary random       # Open a random note
-diary dir          # Open terminal shell inside diary notes folder (alias: diary cd)
-diary settings     # Open configuration file in editor
+diary tags         # Display ranked list of all tags
+diary tag [tag]    # Filter and browse notes by tag with preview
+diary dir          # Open terminal shell inside diary notes folder
+diary config       # Open configuration file in editor
+diary source       # Open CLI Diary script source code in editor
 diary stats        # Show word counts and stats
-diary update       # Manual git pull, commit, and push
 diary upgrade      # Self-update CLI Diary script binary from GitHub
 diary help         # Show command list
 ```
 
 ## Config
 
-Config is saved at `~/.config/diary/config` (open anytime with `diary settings`):
+Config is saved at `~/.config/diary/config` (open anytime with `diary config`):
 
 ```bash
 DIARY_DIR="$HOME/Documents/Diary"

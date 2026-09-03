@@ -52,6 +52,47 @@ create_temp_md() {
     mktemp "$tmp_dir/diary_tmp.XXXXXX"
 }
 
+browse_notes_fzf() {
+    local query="$1"
+
+    if ! command -v fzf >/dev/null 2>&1; then
+        echo "Error: fzf is required for interactive search."
+        return 1
+    fi
+
+    local selection
+    selection=$(grep -RniI --exclude-dir=".git" "$query" "$DIR" 2>/dev/null | fzf \
+        --delimiter : \
+        --with-nth 1,2,3.. \
+        --preview 'file={1}; line={2}; head -n $((line + 10)) "$file" | tail -n 21' \
+        --preview-window 'right:60%:wrap')
+
+    if [ -n "$selection" ]; then
+        local target_file target_line
+        target_file=$(echo "$selection" | cut -d: -f1)
+        target_line=$(echo "$selection" | cut -d: -f2)
+        
+        if [ -n "$target_line" ] && { [[ "$EDITOR_BIN" == *"nvim"* ]] || [[ "$EDITOR_BIN" == *"vim"* ]]; }; then
+            "$EDITOR_BIN" "+$target_line" "$target_file"
+        else
+            "$EDITOR_BIN" "$target_file"
+        fi
+        sync_git
+    fi
+}
+
+get_all_tags() {
+    {
+        # Match hashtags like #ideas, #reading
+        grep -rohI --exclude-dir=".git" -E '#[a-zA-Z0-9_-]+' "$DIR" 2>/dev/null
+        
+        # Match YAML frontmatter tags like tags: [ideas, reading]
+        grep -rhI --exclude-dir=".git" -E '^[ \t]*tags:[ \t]*' "$DIR" 2>/dev/null | \
+            sed -E 's/^[ \t]*tags:[ \t]*//' | tr -d '[]' | tr ',' '\n' | \
+            sed -E 's/^[ \t]*//;s/[ \t]*$//' | grep -v '^$' | sed 's/^/#/'
+    } | sort | uniq -c | sort -nr
+}
+
 open_editor() {
     local file="$1"
     local is_new="${2:-false}"
@@ -266,13 +307,17 @@ NOTE
     fi 
 }
 
-# DOC: Open today's latest note
-cmd_today() {
+# DOC: Open the latest note
+cmd_latest() {
     local file
     file=$(find "$DIR" -maxdepth 1 -name "*$(date +%F)*.md" 2>/dev/null | sort | tail -n1)
 
     if [ -z "$file" ]; then
-        echo "No note exists for today."
+        file=$(find "$DIR" -maxdepth 1 -name "*.md" 2>/dev/null | sort | tail -n1)
+    fi
+
+    if [ -z "$file" ]; then
+        echo "No notes found."
         exit 1
     fi
     
@@ -302,35 +347,45 @@ cmd_random() {
 cmd_search() {
     shift
     local query="$*"
+    browse_notes_fzf "$query"
+}
 
-    if ! command -v fzf >/dev/null 2>&1; then
-        echo "Error: fzf is required for interactive search."
-        return 1
+# DOC: Display ranked list of all tags and counts
+cmd_tags() {
+    local tag_list
+    tag_list=$(get_all_tags)
+    if [ -z "$tag_list" ]; then
+        echo "No tags found."
+        return 0
+    fi
+    echo "$tag_list"
+}
+
+# DOC: Browse notes filtered by tag
+cmd_tag() {
+    shift
+    local tag="$1"
+    
+    if [ -z "$tag" ]; then
+        local tag_list
+        tag_list=$(get_all_tags)
+        if [ -z "$tag_list" ]; then
+            echo "No tags found."
+            return 0
+        fi
+        
+        local selected_line
+        selected_line=$(echo "$tag_list" | fzf --prompt="Select tag > ")
+        tag=$(echo "$selected_line" | awk '{print $2}')
     fi
 
-    local selection
-    selection=$(grep -RniI --exclude-dir=".git" "$query" "$DIR" 2>/dev/null | fzf \
-        --delimiter : \
-        --with-nth 1,2,3.. \
-        --preview 'file={1}; line={2}; head -n $((line + 10)) "$file" | tail -n 21' \
-        --preview-window 'right:60%:wrap')
-
-    if [ -n "$selection" ]; then
-        local target_file target_line
-        target_file=$(echo "$selection" | cut -d: -f1)
-        target_line=$(echo "$selection" | cut -d: -f2)
-        
-        if [ -n "$target_line" ] && { [[ "$EDITOR_BIN" == *"nvim"* ]] || [[ "$EDITOR_BIN" == *"vim"* ]]; }; then
-            "$EDITOR_BIN" "+$target_line" "$target_file"
-        else
-            "$EDITOR_BIN" "$target_file"
-        fi
-        sync_git
+    if [ -n "$tag" ]; then
+        browse_notes_fzf "$tag"
     fi
 }
 
-# DOC: Edit this script
-cmd_edit() {
+# DOC: Open the CLI Diary script source code in editor
+cmd_source() {
     "$EDITOR_BIN" "$0"
 }
 
@@ -355,26 +410,6 @@ cmd_stats() {
     echo "Commits  : ${commits:-0}"
 }
 
-# DOC: Force sync with Git remote
-cmd_update() {
-    cd "$DIR" || exit 1
-
-    if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
-        echo "Error: '$DIR' is not a Git repository."
-        exit 1
-    fi
-    
-    git pull --rebase --autostash >/dev/null 2>&1
-    git add -A
-    if git diff --cached --quiet; then
-        echo "Already up to date."
-        exit 0
-    fi
-    
-    git commit -m "Manual update $(date '+%Y-%m-%d %H:%M')"
-    git push 
-}
-
 # DOC: Change terminal location to diary directory
 cmd_dir() {
     cd "$DIR" || exit 1
@@ -388,20 +423,10 @@ cmd_dir() {
     fi
 }
 
-# DOC: Alias for dir
-cmd_cd() {
-    cmd_dir "$@"
-}
-
 # DOC: Open configuration file in editor
-cmd_settings() {
+cmd_config() {
     mkdir -p "$(dirname "$CONFIG_FILE")"
     open_editor "$CONFIG_FILE" false
-}
-
-# DOC: Alias for settings
-cmd_config() {
-    cmd_settings "$@"
 }
 
 # DOC: Self-update CLI Diary script to the latest version from GitHub
