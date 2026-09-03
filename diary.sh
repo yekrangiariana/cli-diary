@@ -366,9 +366,22 @@ cmd_update() {
     git push 
 }
 
-# DOC: Print diary storage directory path
+# DOC: Change terminal location to diary directory
 cmd_dir() {
-    echo "$DIR"
+    cd "$DIR" || exit 1
+    if [ -t 1 ]; then
+        echo "Entering diary directory: $DIR"
+        echo "(Type 'exit' when done to return)"
+        echo
+        ${SHELL:-bash}
+    else
+        echo "$DIR"
+    fi
+}
+
+# DOC: Alias for dir
+cmd_cd() {
+    cmd_dir "$@"
 }
 
 # DOC: Open configuration file in editor

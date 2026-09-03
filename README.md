@@ -37,7 +37,7 @@ diary voice        # Speech-to-text entry (Android/Termux)
 diary search <txt> # Interactive search with preview
 diary today        # Open today's note
 diary random       # Open a random note
-diary dir          # Print diary storage directory path
+diary dir          # Open terminal shell inside diary notes folder (alias: diary cd)
 diary settings     # Open configuration file in editor
 diary stats        # Show word counts and stats
 diary update       # Manual git pull, commit, and push
