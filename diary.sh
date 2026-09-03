@@ -438,19 +438,31 @@ cmd_upgrade() {
 
     echo "Checking for updates..."
     
-    if curl -sSL "https://raw.githubusercontent.com/yekrangiariana/cli-diary/main/diary.sh" -o "$tmp_update"; then
+    # Use cache-buster timestamp parameter to bypass GitHub CDN 5-minute caching
+    if curl -sSL "https://raw.githubusercontent.com/yekrangiariana/cli-diary/main/diary.sh?v=$(date +%s)" -o "$tmp_update"; then
+        if [ ! -s "$tmp_update" ]; then
+            rm -f "$tmp_update"
+            echo "Error: Downloaded update file is empty."
+            return 1
+        fi
+
         if cmp -s "$target_bin" "$tmp_update"; then
             rm -f "$tmp_update"
             echo "Already up to date."
             return 0
         fi
 
-        mv "$tmp_update" "$target_bin"
-        chmod +x "$target_bin"
-        echo "Updated to latest version."
+        if mv "$tmp_update" "$target_bin" 2>/dev/null; then
+            chmod +x "$target_bin" 2>/dev/null || true
+            echo "Updated to latest version."
+        else
+            rm -f "$tmp_update"
+            echo "Error: Cannot write to $target_bin (permission denied)."
+            return 1
+        fi
     else
         rm -f "$tmp_update"
-        echo "Error: Update failed."
+        echo "Error: Could not connect to GitHub."
         return 1
     fi
 }
