@@ -57,7 +57,7 @@ open_editor() {
     local is_new="${2:-false}"
 
     if [ "$is_new" = true ] && { [[ "$EDITOR_BIN" == *"nvim"* ]] || [[ "$EDITOR_BIN" == *"vim"* ]]; }; then
-        "$EDITOR_BIN" "+/^Title: /" "+normal! $" "$file"
+        "$EDITOR_BIN" "+/^title: /" "+normal! $" "$file"
     else
         "$EDITOR_BIN" "$file"
     fi
@@ -108,7 +108,7 @@ edit_and_sync() {
         fi
         
         local title_line
-        title_line=$(awk -F 'Title:[ \t]*' 'NF>1 {print $2; exit}' "$file")
+        title_line=$(awk -F '^[ \t]*[tT][iI][tT][lL][eE]:[ \t]*' 'NF>1 {print $2; exit}' "$file")
         
         if [ -n "$title_line" ]; then
             local safe_title
@@ -140,10 +140,13 @@ cmd_new() {
     local file="$DIR/$(date +%Y-%m-%d_%H-%M-%S).md"
 
     cat > "$file" <<NOTE
-# $(date '+%A %d %B %Y') at $(date '+%H:%M')
+---
+title: 
+date: $(date '+%Y-%m-%d %H:%M:%S')
+tags: []
+---
 
-Title: 
-Tags: 
+# $(date '+%A %d %B %Y') at $(date '+%H:%M')
 
 NOTE
 
@@ -164,10 +167,13 @@ cmd_capture() {
         if [ -z "$today_file" ]; then
             today_file="$DIR/$(date +%Y-%m-%d_%H-%M-%S).md"
             cat > "$today_file" <<NOTE
-# $(date '+%A %d %B %Y') at $(date '+%H:%M')
+---
+title: 
+date: $(date '+%Y-%m-%d %H:%M:%S')
+tags: []
+---
 
-Title: 
-Tags: 
+# $(date '+%A %d %B %Y') at $(date '+%H:%M')
 
 NOTE
         fi
@@ -226,10 +232,13 @@ cmd_voice() {
                 if [ -z "$today_file" ]; then
                     today_file="$DIR/$(date +%Y-%m-%d_%H-%M-%S).md"
                     cat > "$today_file" <<NOTE
-# $(date '+%A %d %B %Y') at $(date '+%H:%M')
+---
+title: 
+date: $(date '+%Y-%m-%d %H:%M:%S')
+tags: []
+---
 
-Title: 
-Tags: 
+# $(date '+%A %d %B %Y') at $(date '+%H:%M')
 
 NOTE
                 fi
