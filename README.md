@@ -1,52 +1,57 @@
-# termux-diary
+# cli-diary
 
-A lightweight, distraction-free markdown journaling CLI built for Termux on Android.
+A lightweight bash script for markdown journaling in your terminal. Works on Android (Termux), macOS, and Linux.
 
 ## Features
 
-- **Zero bloat**: Pure Bash, Neovim, and plain Markdown.
-- **Auto-slug titles**: Title extraction and filename renaming on save.
-- **Empty file cleanup**: Discards unmodified templates automatically.
-- **Voice-to-text**: Integrated voice capture using `termux-api`.
-- **Interactive search**: Search entries with an instant side-by-side preview via `fzf`.
-- **Git sync**: Auto-rebase, commit, and push on save.
+- **Pure Bash**: Uses your text editor (`nvim`, `vim`, `nano`) and plain `.md` files.
+- **Auto-naming**: Sets filenames automatically based on the title line.
+- **Interactive Search**: Search notes with a live preview via `fzf`.
+- **Auto Git Sync**: Commits and pushes changes automatically when you save.
+- **Voice Notes (Android/Termux)**: Transcribe speech straight into your daily note.
 
-## Dependencies
+## Install
 
-The installer will configure these automatically, but for manual setups:
-- `git`
-- `neovim`
-- `fzf`
-- `termux-api` (package + Android app)
-- `coreutils`, `findutils`, `gawk`, `sed`
-
-## Quick Install (Termux)
+Run the installer:
 
 ```bash
-pkg install -y curl
-curl -fsSL [https://raw.githubusercontent.com/YOUR_USERNAME/YOUR_REPO/main/install.sh](https://raw.githubusercontent.com/YOUR_USERNAME/YOUR_REPO/main/install.sh) | bash
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/yekrangiariana/cli-diary/main/install.sh)"
 ```
 
-## Usage
+The script asks for your note directory, checks dependencies (`git`, `fzf`, `neovim`), and places `diary` in your PATH.
+
+## Uninstall
+
+To remove `cli-diary` and its configuration:
 
 ```bash
-diary              # Create a new note (default)
-diary capture      # Fast scratchpad appended to today's note
-diary voice        # Transcribe speech directly into today's note
-diary search <txt> # Search entries interactively with preview
-diary today        # Open today's latest note
-diary random       # Open a random journal entry
-diary stats        # Display word count, note count, and commits
-diary update       # Force a manual pull, commit, and push
-diary help         # Display all available commands
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/yekrangiariana/cli-diary/main/uninstall.sh)"
 ```
 
-## Configuration
-
-Settings are stored in `~/.config/diary/config`. 
-
-To change your diary storage location, edit that file:
+## Commands
 
 ```bash
-DIARY_DIR="/path/to/your/notes"
+diary              # Create a new note
+diary capture      # Quick scratchpad entry appended to today's note
+diary voice        # Speech-to-text entry (Android/Termux)
+diary search <txt> # Interactive search with preview
+diary today        # Open today's note
+diary random       # Open a random note
+diary stats        # Show word counts and stats
+diary update       # Manual git pull, commit, and push
+diary help         # Show command list
 ```
+
+## Config
+
+Config is saved at `~/.config/diary/config`:
+
+```bash
+DIARY_DIR="$HOME/Documents/Diary"
+DIARY_EDITOR="nvim"
+```
+
+## Android (Termux) Notes
+
+- **Storage**: Run `termux-setup-storage` if saving to shared phone storage (`~/storage/shared/...`).
+- **Voice Input**: `diary voice` requires the `termux-api` package (`pkg install termux-api`) and the **Termux:API** app from F-Droid.
