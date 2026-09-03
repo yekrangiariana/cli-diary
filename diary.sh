@@ -391,23 +391,50 @@ cmd_source() {
 
 # DOC: Show diary statistics
 cmd_stats() {
-    local notes words first_file last_file first last commits
+    local notes words first_file last_file first_date last_date commits week_notes read_time top_tags_str
+    
     notes=$(find "$DIR" -maxdepth 1 -name "*.md" 2>/dev/null | wc -l | tr -d ' ')
+    notes=${notes:-0}
+    
     words=$(find "$DIR" -maxdepth 1 -name "*.md" -exec cat {} + 2>/dev/null | wc -w | tr -d ' ')
+    words=${words:-0}
+    
+    read_time=$(( (words + 249) / 250 ))
+    
+    if [ "$notes" -gt 0 ]; then
+        week_notes=$(find "$DIR" -maxdepth 1 -name "*.md" -mtime -7 2>/dev/null | wc -l | tr -d ' ')
+    else
+        week_notes=0
+    fi
     
     first_file=$(find "$DIR" -maxdepth 1 -name "*.md" 2>/dev/null | sort | head -n1)
     last_file=$(find "$DIR" -maxdepth 1 -name "*.md" 2>/dev/null | sort | tail -n1)
     
-    first="${first_file:+$(basename "$first_file")}"
-    last="${last_file:+$(basename "$last_file")}"
+    first_date="${first_file:+$(basename "$first_file" | grep -oE '[0-9]{4}-[0-9]{2}-[0-9]{2}' | head -n1)}"
+    last_date="${last_file:+$(basename "$last_file" | grep -oE '[0-9]{4}-[0-9]{2}-[0-9]{2}' | head -n1)}"
+    
+    first_date="${first_date:-None}"
+    last_date="${last_date:-None}"
+    
     commits=$(git -C "$DIR" rev-list --count HEAD 2>/dev/null || echo "0")
+    
+    top_tags_str=$(get_all_tags | head -n 3 | awk '{printf "%s (%s)  ", $2, $1}')
+    top_tags_str="${top_tags_str:-None}"
 
-    echo "Directory: $DIR"
-    echo "Notes    : ${notes:-0}"
-    echo "Words    : ${words:-0}"
-    echo "First    : ${first:-None}"
-    echo "Latest   : ${last:-None}"
-    echo "Commits  : ${commits:-0}"
+    local BOLD="\033[1m"
+    local CYAN="\033[36m"
+    local GREEN="\033[32m"
+    local RESET="\033[0m"
+
+    echo -e "${CYAN}${BOLD}── CLI DIARY METRICS ──────────────────────────${RESET}"
+    echo -e "  ${BOLD}Notes${RESET}        : ${GREEN}${notes}${RESET} entries (${week_notes} this week)"
+    echo -e "  ${BOLD}Words${RESET}        : ${words} words (~${read_time} mins read)"
+    echo -e "  ${BOLD}Top Tags${RESET}     : ${top_tags_str}"
+    echo -e "  ${BOLD}First Entry${RESET}  : ${first_date}"
+    echo -e "  ${BOLD}Latest Entry${RESET} : ${last_date}"
+    echo -e "  ${BOLD}Git Commits${RESET}  : ${commits} commits"
+    echo -e "  ${BOLD}Storage Path${RESET} : ${DIR}"
+    echo -e "${CYAN}${BOLD}───────────────────────────────────────────────${RESET}"
 }
 
 # DOC: Change terminal location to diary directory
