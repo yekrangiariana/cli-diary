@@ -395,6 +395,21 @@ cmd_config() {
     cmd_settings "$@"
 }
 
+# DOC: Self-update CLI Diary script to the latest version from GitHub
+cmd_upgrade() {
+    local target_bin
+    target_bin=$(command -v diary 2>/dev/null || echo "$0")
+    
+    echo "Updating CLI Diary binary from GitHub..."
+    if curl -fsSL "https://raw.githubusercontent.com/yekrangiariana/cli-diary/main/diary.sh" -o "$target_bin"; then
+        chmod +x "$target_bin"
+        echo "CLI Diary has been updated to the latest version!"
+    else
+        echo "Error: Failed to download update from GitHub."
+        return 1
+    fi
+}
+
 # DOC: Display this help menu
 cmd_help() {
     echo "CLI Diary commands:"

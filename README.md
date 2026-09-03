@@ -41,6 +41,7 @@ diary dir          # Open terminal shell inside diary notes folder (alias: diary
 diary settings     # Open configuration file in editor
 diary stats        # Show word counts and stats
 diary update       # Manual git pull, commit, and push
+diary upgrade      # Self-update CLI Diary script binary from GitHub
 diary help         # Show command list
 ```
 
