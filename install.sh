@@ -95,26 +95,21 @@ for cmd in git fzf awk sed find; do
     fi
 done
 
-# Check editor dependency (nvim or vim or nano)
-if ! command -v neovim >/dev/null 2>&1 && ! command -v nvim >/dev/null 2>&1 && ! command -v vim >/dev/null 2>&1; then
-    MISSING_DEPS+=("neovim")
-fi
-
 if [ ${#MISSING_DEPS[@]} -eq 0 ]; then
-    echo -e "${GREEN}✓ All core dependencies are installed (git, fzf, core utilities, editor).${RESET}"
+    echo -e "${GREEN}✓ Core dependencies installed (git, fzf, core utilities).${RESET}"
 else
     echo -e "${YELLOW}Missing dependencies: ${MISSING_DEPS[*]}${RESET}"
     
     if [ "$IS_TERMUX" = true ]; then
         if prompt_confirm "Would you like to install missing dependencies via pkg? [Y/n]: " "y"; then
             echo "Installing packages..."
-            pkg update < /dev/tty && pkg install -y git neovim fzf termux-api coreutils findutils gawk sed < /dev/tty
+            pkg update < /dev/tty && pkg install -y git fzf termux-api coreutils findutils gawk sed nano < /dev/tty
         fi
     elif [ "$IS_MACOS" = true ]; then
         if command -v brew >/dev/null 2>&1; then
             if prompt_confirm "Would you like to install missing dependencies via Homebrew? [Y/n]: " "y"; then
                 echo "Installing packages via Homebrew..."
-                brew install git neovim fzf < /dev/tty
+                brew install git fzf < /dev/tty
             fi
         else
             echo "Homebrew is not installed. Please install ${MISSING_DEPS[*]} manually using your package manager."
@@ -122,15 +117,15 @@ else
     elif [ "$IS_LINUX" = true ]; then
         if command -v apt-get >/dev/null 2>&1; then
             if prompt_confirm "Would you like to install missing dependencies via apt? [Y/n]: " "y"; then
-                sudo apt-get update < /dev/tty && sudo apt-get install -y git neovim fzf < /dev/tty
+                sudo apt-get update < /dev/tty && sudo apt-get install -y git fzf nano < /dev/tty
             fi
         elif command -v pacman >/dev/null 2>&1; then
             if prompt_confirm "Would you like to install missing dependencies via pacman? [Y/n]: " "y"; then
-                sudo pacman -Sy --noconfirm git neovim fzf < /dev/tty
+                sudo pacman -Sy --noconfirm git fzf nano < /dev/tty
             fi
         elif command -v dnf >/dev/null 2>&1; then
             if prompt_confirm "Would you like to install missing dependencies via dnf? [Y/n]: " "y"; then
-                sudo dnf install -y git neovim fzf < /dev/tty
+                sudo dnf install -y git fzf nano < /dev/tty
             fi
         else
             echo "Please install missing dependencies (${MISSING_DEPS[*]}) using your distribution's package manager."
@@ -138,13 +133,12 @@ else
     fi
 fi
 
-# 3. Diary Storage Path Prompt
+# 3. Diary Storage Path & Git Repository Setup
 echo
 echo -e "${BOLD}Configuring Diary Storage Path${RESET}"
 
 if [ "$IS_TERMUX" = true ]; then
     DEFAULT_DIR="$HOME/storage/shared/Documents/Diary"
-    # Ensure Termux storage setup if needed
     if [ ! -d "$HOME/storage" ]; then
         echo "Setting up Termux storage access..."
         termux-setup-storage || true
@@ -154,15 +148,31 @@ else
 fi
 
 CHOSEN_DIR=$(prompt_input "Enter directory to save diary entries [$DEFAULT_DIR]: " "$DEFAULT_DIR")
-
-# Expand ~ to $HOME
 CHOSEN_DIR="${CHOSEN_DIR/#\~/$HOME}"
+
+CLONED_REPO=false
+
+if prompt_confirm "Do you already have an existing GitHub repository for your diary notes? [y/N]: " "n"; then
+    REMOTE_URL=$(prompt_input "Enter your GitHub repository URL (e.g. https://github.com/user/notes.git): " "")
+    if [ -n "$REMOTE_URL" ]; then
+        if [ -d "$CHOSEN_DIR" ] && [ "$(ls -A "$CHOSEN_DIR" 2>/dev/null)" ]; then
+            echo -e "${YELLOW}Notice: $CHOSEN_DIR is not empty. Linking remote origin instead of cloning.${RESET}"
+        else
+            echo "Cloning repository from $REMOTE_URL..."
+            git clone "$REMOTE_URL" "$CHOSEN_DIR" < /dev/tty || true
+            CLONED_REPO=true
+        fi
+    fi
+fi
+
 mkdir -p "$CHOSEN_DIR" 2>/dev/null || true
 echo -e "Diary directory set to: ${GREEN}$CHOSEN_DIR${RESET}"
 
 # 4. Preferred Editor Prompt
 echo
-DEFAULT_EDITOR="${DIARY_EDITOR:-${EDITOR:-nvim}}"
+echo -e "${BOLD}Configuring Text Editor${RESET}"
+DEFAULT_EDITOR="${DIARY_EDITOR:-${EDITOR:-nano}}"
+echo "Supported options include any editor command (e.g. nano, nvim, vim, micro, hx, 'code --wait')."
 CHOSEN_EDITOR=$(prompt_input "Preferred text editor command [$DEFAULT_EDITOR]: " "$DEFAULT_EDITOR")
 
 # 5. Save Configuration
@@ -204,20 +214,36 @@ fi
 chmod +x "$TARGET_EXEC"
 echo -e "Installed binary to: ${GREEN}$TARGET_EXEC${RESET}"
 
-# 7. Git Repository Setup Prompt
+# 7. Git Repository & Remote Link Setup
 echo
-if prompt_confirm "Would you like to initialize a Git repository in $CHOSEN_DIR? [Y/n]: " "y"; then
-    if ! git -C "$CHOSEN_DIR" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
-        git -C "$CHOSEN_DIR" init >/dev/null
-        echo -e "${GREEN}✓ Git repository initialized in $CHOSEN_DIR${RESET}"
-    else
-        echo -e "${GREEN}✓ $CHOSEN_DIR is already a Git repository.${RESET}"
-    fi
-
-    # Fix permission/mode tracking issue on Termux / Android shared storage
+if [ "$CLONED_REPO" = true ]; then
+    echo -e "${GREEN}✓ Git repository cloned and ready in $CHOSEN_DIR${RESET}"
     if [ "$IS_TERMUX" = true ] || [[ "$CHOSEN_DIR" == *"storage/shared"* ]]; then
         git -C "$CHOSEN_DIR" config core.fileMode false
-        echo -e "${GREEN}✓ Configured core.fileMode = false for Android shared storage compatibility.${RESET}"
+        echo -e "${GREEN}✓ Configured core.fileMode = false for Android shared storage.${RESET}"
+    fi
+else
+    if prompt_confirm "Would you like to initialize Git and link a remote GitHub repository? [Y/n]: " "y"; then
+        if ! git -C "$CHOSEN_DIR" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+            git -C "$CHOSEN_DIR" init >/dev/null
+            echo -e "${GREEN}✓ Git repository initialized in $CHOSEN_DIR${RESET}"
+        else
+            echo -e "${GREEN}✓ $CHOSEN_DIR is already a Git repository.${RESET}"
+        fi
+
+        # Fix permission/mode tracking issue on Termux / Android shared storage
+        if [ "$IS_TERMUX" = true ] || [[ "$CHOSEN_DIR" == *"storage/shared"* ]]; then
+            git -C "$CHOSEN_DIR" config core.fileMode false
+            echo -e "${GREEN}✓ Configured core.fileMode = false for Android shared storage.${RESET}"
+        fi
+
+        REMOTE_URL=$(prompt_input "Enter remote GitHub repository URL (press Enter to skip): " "")
+        if [ -n "$REMOTE_URL" ]; then
+            git -C "$CHOSEN_DIR" remote remove origin 2>/dev/null || true
+            git -C "$CHOSEN_DIR" remote add origin "$REMOTE_URL"
+            git -C "$CHOSEN_DIR" branch -M main 2>/dev/null || true
+            echo -e "${GREEN}✓ Linked remote origin: $REMOTE_URL${RESET}"
+        fi
     fi
 fi
 

@@ -24,7 +24,7 @@ fi
 mkdir -p "$DIR" 2>/dev/null || true
 
 # Preferred editor
-EDITOR_BIN="${DIARY_EDITOR:-${EDITOR:-nvim}}"
+EDITOR_BIN="${DIARY_EDITOR:-${EDITOR:-nano}}"
 
 # ==============================================================================
 # HELPER FUNCTIONS
@@ -364,6 +364,22 @@ cmd_update() {
     
     git commit -m "Manual update $(date '+%Y-%m-%d %H:%M')"
     git push 
+}
+
+# DOC: Print diary storage directory path
+cmd_dir() {
+    echo "$DIR"
+}
+
+# DOC: Open configuration file in editor
+cmd_settings() {
+    mkdir -p "$(dirname "$CONFIG_FILE")"
+    open_editor "$CONFIG_FILE" false
+}
+
+# DOC: Alias for settings
+cmd_config() {
+    cmd_settings "$@"
 }
 
 # DOC: Display this help menu

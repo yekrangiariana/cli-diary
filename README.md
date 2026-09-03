@@ -4,7 +4,7 @@ A lightweight bash script for markdown journaling in your terminal. Works on And
 
 ## Features
 
-- **Pure Bash**: Uses your text editor (`nvim`, `vim`, `nano`) and plain `.md` files.
+- **Pure Bash**: Works with your choice of text editor (`nano`, `nvim`, `vim`, `micro`, etc.) and plain `.md` files.
 - **Auto-naming**: Sets filenames automatically based on the title line.
 - **Interactive Search**: Search notes with a live preview via `fzf`.
 - **Auto Git Sync**: Commits and pushes changes automatically when you save.
@@ -18,7 +18,7 @@ Run the installer:
 bash -c "$(curl -fsSL https://raw.githubusercontent.com/yekrangiariana/cli-diary/main/install.sh)"
 ```
 
-The script asks for your note directory, checks dependencies (`git`, `fzf`, `neovim`), and places `diary` in your PATH.
+The script asks for your note directory, checks dependencies (`git`, `fzf`), prompts for your preferred editor, and places `diary` in your PATH.
 
 ## Uninstall
 
@@ -37,6 +37,8 @@ diary voice        # Speech-to-text entry (Android/Termux)
 diary search <txt> # Interactive search with preview
 diary today        # Open today's note
 diary random       # Open a random note
+diary dir          # Print diary storage directory path
+diary settings     # Open configuration file in editor
 diary stats        # Show word counts and stats
 diary update       # Manual git pull, commit, and push
 diary help         # Show command list
@@ -44,11 +46,11 @@ diary help         # Show command list
 
 ## Config
 
-Config is saved at `~/.config/diary/config`:
+Config is saved at `~/.config/diary/config` (open anytime with `diary settings`):
 
 ```bash
 DIARY_DIR="$HOME/Documents/Diary"
-DIARY_EDITOR="nvim"
+DIARY_EDITOR="nano"
 ```
 
 ## Android (Termux) Notes
