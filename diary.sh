@@ -98,7 +98,7 @@ open_editor() {
     local is_new="${2:-false}"
 
     if [ "$is_new" = true ] && { [[ "$EDITOR_BIN" == *"nvim"* ]] || [[ "$EDITOR_BIN" == *"vim"* ]]; }; then
-        "$EDITOR_BIN" "+/^title: /" "+normal! $" "$file"
+        "$EDITOR_BIN" "+/^title: /" "+normal! $i" "$file"
     else
         "$EDITOR_BIN" "$file"
     fi
@@ -153,7 +153,7 @@ edit_and_sync() {
         
         if [ -n "$title_line" ]; then
             local safe_title
-            safe_title=$(echo "$title_line" | tr -d '\r' | tr '[:upper:]' '[:lower:]' | sed -E 's/[^a-zA-Z0-9]+/-/g' | sed -E 's/^-+|-+$//g')
+            safe_title=$(echo "$title_line" | tr -d '\r"' | sed -E "s/^['\"]+|['\"]+$//g" | tr '[:upper:]' '[:lower:]' | sed -E 's/[^a-zA-Z0-9]+/-/g' | sed -E 's/^-+|-+$//g')
             
             if [ -n "$safe_title" ]; then
                 local new_file="$DIR/${safe_title}-$(date +%Y-%m-%d).md"
@@ -182,7 +182,7 @@ cmd_new() {
 
     cat > "$file" <<NOTE
 ---
-title: 
+title: ""
 date: $(date '+%Y-%m-%d %H:%M:%S')
 tags: []
 ---
@@ -209,7 +209,7 @@ cmd_capture() {
             today_file="$DIR/$(date +%Y-%m-%d_%H-%M-%S).md"
             cat > "$today_file" <<NOTE
 ---
-title: 
+title: ""
 date: $(date '+%Y-%m-%d %H:%M:%S')
 tags: []
 ---
@@ -274,7 +274,7 @@ cmd_voice() {
                     today_file="$DIR/$(date +%Y-%m-%d_%H-%M-%S).md"
                     cat > "$today_file" <<NOTE
 ---
-title: 
+title: ""
 date: $(date '+%Y-%m-%d %H:%M:%S')
 tags: []
 ---
@@ -429,17 +429,28 @@ cmd_config() {
     open_editor "$CONFIG_FILE" false
 }
 
-# DOC: Self-update CLI Diary script to the latest version from GitHub
+# DOC: Self-update CLI Diary script from GitHub
 cmd_upgrade() {
     local target_bin
     target_bin=$(command -v diary 2>/dev/null || echo "$0")
+    local tmp_update
+    tmp_update=$(create_temp_md)
+
+    echo "Checking for updates..."
     
-    echo "Updating CLI Diary binary from GitHub..."
-    if curl -fsSL "https://raw.githubusercontent.com/yekrangiariana/cli-diary/main/diary.sh" -o "$target_bin"; then
+    if curl -sSL "https://raw.githubusercontent.com/yekrangiariana/cli-diary/main/diary.sh" -o "$tmp_update"; then
+        if cmp -s "$target_bin" "$tmp_update"; then
+            rm -f "$tmp_update"
+            echo "Already up to date."
+            return 0
+        fi
+
+        mv "$tmp_update" "$target_bin"
         chmod +x "$target_bin"
-        echo "CLI Diary has been updated to the latest version!"
+        echo "Updated to latest version."
     else
-        echo "Error: Failed to download update from GitHub."
+        rm -f "$tmp_update"
+        echo "Error: Update failed."
         return 1
     fi
 }
